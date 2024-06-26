@@ -1,0 +1,40 @@
+name: Deploy Helm Chart to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        version: 'latest'
+        install_components: kubectl
+
+    - name: Authenticate to GCP
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Install Helm
+      run: |
+        curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+    - name: Deploy with Helm
+      env:
+        CLOUDSDK_PYTHON: /usr/bin/python3
+      run: |
+        gcloud components update
+       gcloud container clusters get-credentials gke-project-426823-gke --region us-east5 --project gke-project-426823
+        helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
+        helm template sonarqube sonarqube/sonarqube > ./sonarqube.yaml  -n sonarqube
+        ls
+        kubectl apply  -f sonarqube.yaml -n sonarqube
